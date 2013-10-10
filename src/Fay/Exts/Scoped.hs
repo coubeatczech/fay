@@ -23,6 +23,7 @@ type GuardedAlts = A.GuardedAlts X
 type GuardedRhs = A.GuardedRhs X
 type ImportDecl = A.ImportDecl X
 type ImportSpec = A.ImportSpec X
+type InstDecl = A.InstDecl X
 type Literal = A.Literal X
 type Match = A.Match X
 type Module = A.Module X

@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE ViewPatterns               #-}
 
 module Fay.Compiler.Desugar
   (desugar
@@ -60,8 +61,15 @@ desugarDecl :: Decl l -> Desugar (Decl l)
 desugarDecl d = case d of
   FunBind l ms -> FunBind l <$> mapM desugarMatch ms
   PatBind l p mt rhs mbs -> PatBind l <$> desugarPat p <*> return mt <*> desugarRhs rhs <*> mmap desugarBinds mbs
+  InstDecl l mctx (simplifyHead -> head) mdecls -> return $ InstDecl l mctx head (Just $ fromMaybe [] mdecls)
 
   _ -> return d
+
+  where
+    simplifyHead ih = case ih of
+      IHead{} -> ih
+      IHInfix l t1 n t2 -> IHead l n [t1,t2]
+      IHParen _ ih -> simplifyHead ih
 
 mmap :: (Applicative f) => (t -> f a) -> Maybe t -> f (Maybe a)
 mmap f mbs' = case mbs' of Just b -> return <$> f b; Nothing -> pure Nothing

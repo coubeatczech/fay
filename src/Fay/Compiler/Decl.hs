@@ -52,7 +52,7 @@ compileDecl toplevel decl = case decl of
   TypeSig  {} -> return []
   InfixDecl{} -> return []
   ClassDecl{} -> return []
-  InstDecl {} -> return [] -- FIXME: Ignore.
+  InstDecl _ _ctx (IHead _ n ts) (Just idecls) -> compileInstDecl n ts idecls
   DerivDecl{} -> return []
   DefaultDecl{} -> return []
   RulePragmaDecl{} -> return []
@@ -66,6 +66,8 @@ compileDecl toplevel decl = case decl of
   AnnPragma{} -> return []
   _ -> throwError (UnsupportedDeclaration decl)
 
+compileInstDecl :: S.QName -> [S.Type] -> [S.InstDecl] -> Compile [JsStmt]
+compileInstDecl n ts idecls = return []
 
 mkTyVars :: S.DeclHead -> [S.TyVarBind]
 mkTyVars (DHead _ _ binds) = binds
