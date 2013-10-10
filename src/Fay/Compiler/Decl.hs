@@ -67,7 +67,12 @@ compileDecl toplevel decl = case decl of
   _ -> throwError (UnsupportedDeclaration decl)
 
 compileInstDecl :: S.QName -> [S.Type] -> [S.InstDecl] -> Compile [JsStmt]
-compileInstDecl n ts idecls = return []
+compileInstDecl n ts idecls = do
+  qn <- qualifyQName n
+  concat <$> (forM idecls $ \(InsDecl _ dls) -> case dls of
+    pat@PatBind{} -> compilePatBind False Nothing pat
+    FunBind _ matches -> compileFunCase False matches)
+
 
 mkTyVars :: S.DeclHead -> [S.TyVarBind]
 mkTyVars (DHead _ _ binds) = binds
