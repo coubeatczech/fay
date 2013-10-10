@@ -110,6 +110,7 @@ data CompileState = CompileState
   , stateJsModulePaths :: Set ModulePath                     -- ^ Module paths that have code generated for them.
   , stateUseFromString :: Bool                               -- ^ Use JS Strings instead of [Char] for string literals?
   , stateTypeSigs      :: Map N.QName N.Type                 -- ^ Module level declarations having explicit type signatures
+  , stateClass         :: Map (N.QName,N.Name) Int           -- ^ Int is the position of the (top level, contravariant) type variable.
   } deriving (Show)
 
 -- | Things written out by the compiler.

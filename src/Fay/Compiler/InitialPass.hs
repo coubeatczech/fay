@@ -46,6 +46,7 @@ preprocessFileWithSource filepath contents = do
                      -- wrong name. Not sure why it works to do it
                      -- here!
                    , stateModuleName  = stateModuleName  st
+                   , stateClass       = stateClass       st
                    }
 
 -- | Preprocess from an AST
@@ -106,6 +107,9 @@ scanRecordDecls decl = do
   case decl of
     DataDecl _ DataType{} _ _ constructors _ -> dataDecl constructors
     GDataDecl _ DataType{} _ _ _ decls _ -> dataDecl (map convertGADT decls)
+    (unAnn -> c@(ClassDecl _  _ctx (DHead _ name tyvars) _fds (Just decls))) -> do
+      ds <- M.fromList <$> classDecl c name tyvars decls
+      modify $ \s -> s { stateClass = ds `M.union` (stateClass s) }
     _ -> return ()
 
   where
@@ -117,6 +121,24 @@ scanRecordDecls decl = do
     conDeclName (ConDecl _ n _) = n
     conDeclName (InfixConDecl _ _ n _) = n
     conDeclName (RecDecl _ n _) = n
+
+    classDecl :: N.Decl -> N.Name -> [N.TyVarBind] -> [N.ClassDecl] -> Compile [((N.QName,N.Name), Int)]
+    classDecl c className [UnkindedVar _ coTyVar] decls = forM decls $ \dl -> case dl of
+      ClsDecl _ (TypeSig _loc [name] t) -> case findContraVariantPosition c coTyVar t 0 of
+        Just pos -> do
+          qClassName <- qualify className
+          return ((qClassName, name), pos)
+        _        -> undefined -- throwError $ UnsupportedDeclaration c
+      _ -> undefined -- throwError $ UnsupportedDeclaration c
+    classDecl c _ _ _ = undefined -- throwError $ UnsupportedDeclaration c
+
+    findContraVariantPosition :: N.Decl -> N.Name -> N.Type -> Int -> Maybe Int
+    findContraVariantPosition dl name t count = case t of
+      TyFun _ (TyVar _ n) r
+        | name == n -> Just count
+        | otherwise -> findContraVariantPosition dl name r (count+1)
+      TyFun _ _ r -> findContraVariantPosition dl name r (count+1)
+      _ -> error $ show (name, t, count)
 
     -- | Collect record definitions and store record name and field names.
     -- A ConDecl will have fields named slot1..slotN

@@ -6,12 +6,14 @@ module Test.Compile (tests) where
 
 import           Fay
 import           Fay.Compiler.Config
+import           Fay.Exts.NoAnnotation           ()
 import           Fay.System.Process.Extra
 import           Fay.Types                       ()
 
 import           Control.Applicative
 import           Control.Monad
 import           Data.Default
+import qualified Data.Map                        as M
 import           Data.Maybe
 import           Language.Haskell.Exts.Annotated
 import           System.Environment
@@ -105,3 +107,18 @@ case_charEnum = do
     Left UnsupportedEnum{} -> return ()
     Left l  -> assertFailure $ "Should have failed with UnsupportedEnum, but failed with: " ++ show l
     Right _ -> assertFailure $ "Should have failed with UnsupportedEnum, but compiled"
+
+case_findClassContraVariance :: Assertion
+case_findClassContraVariance = do
+  whatAGreatFramework <- fmap (lookup "HASKELL_PACKAGE_SANDBOX") getEnvironment
+  res <- compileFileWithState defConf { configPackageConf = whatAGreatFramework, configTypecheck = True, configFilePath = Just "tests/Compile/ClassContraVariance.hs" } "tests/Compile/ClassContraVariance.hs"
+  either (assertFailure . show) (assertEqual "pos0" (M.fromList [(("ClassContraVariance.Foo","foo"),0)]) . M.filterWithKey (\(Qual _ m _, _) _ -> m == "ClassContraVariance") . stateClass . trd) res
+
+case_findClassContraVariance2 :: Assertion
+case_findClassContraVariance2 = do
+  whatAGreatFramework <- fmap (lookup "HASKELL_PACKAGE_SANDBOX") getEnvironment
+  res <- compileFileWithState defConf { configPackageConf = whatAGreatFramework, configTypecheck = True, configFilePath = Just "tests/Compile/ClassContraVariance2.hs" } "tests/Compile/ClassContraVariance2.hs"
+  either (assertFailure . show) (assertEqual "pos1" (M.fromList [(("ClassContraVariance2.Foo","foo"),1)]) . M.filterWithKey (\(Qual _ m _, _) _ -> m == "ClassContraVariance2") . stateClass . trd) res
+
+trd :: (a,b,c) -> c
+trd (_,_,c) = c

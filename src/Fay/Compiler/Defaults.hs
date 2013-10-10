@@ -40,4 +40,5 @@ defaultCompileState = CompileState
   , stateJsModulePaths = S.empty
   , stateUseFromString = False
   , stateTypeSigs      = M.empty
+  , stateClass         = M.empty
   }
