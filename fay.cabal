@@ -94,6 +94,7 @@ library
                      , Fay.Compiler.GADT
                      , Fay.Compiler.Import
                      , Fay.Compiler.InitialPass
+                     , Fay.Compiler.InstDecl
                      , Fay.Compiler.Misc
                      , Fay.Compiler.Optimizer
                      , Fay.Compiler.Packages

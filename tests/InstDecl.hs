@@ -6,5 +6,7 @@ import           Prelude
 class ShowX a where
   show :: a -> String
 
-instance ShowX Int where
-  show i = undefined
+data X = X
+
+instance ShowX X where
+  show X = "X"

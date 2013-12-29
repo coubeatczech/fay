@@ -11,6 +11,7 @@ module Fay.Compiler.Decl where
 import           Fay.Compiler.Exp
 import           Fay.Compiler.FFI
 import           Fay.Compiler.GADT
+import qualified Fay.Compiler.InstDecl           as I
 import           Fay.Compiler.Misc
 import           Fay.Compiler.Pattern
 import           Fay.Compiler.State
@@ -52,8 +53,8 @@ compileDecl toplevel decl = case decl of
   TypeSig  {} -> return []
   InfixDecl{} -> return []
   ClassDecl _ _ _ _ Nothing -> return []
-  ClassDecl _ _ h _ (Just l) -> compileClassDecl h l
-  InstDecl _ _ctx (IHead _ n ts) (Just idecls) -> compileInstDecl n ts idecls
+  ClassDecl _ _ h _ (Just l) -> I.compileClassDecl h l
+  InstDecl _ _ctx (IHead _ n ts) (Just idecls) -> I.compileInstDecl n ts idecls
   DerivDecl{} -> return []
   DefaultDecl{} -> return []
   RulePragmaDecl{} -> return []
@@ -66,29 +67,6 @@ compileDecl toplevel decl = case decl of
   InstSig{} -> return []
   AnnPragma{} -> return []
   _ -> throwError (UnsupportedDeclaration decl)
-
-compileClassDecl :: S.DeclHead -> [S.ClassDecl] -> Compile [JsStmt]
-compileClassDecl ih cd = concat <$> mapM aux cd
-  where
-    aux :: S.ClassDecl -> Compile [JsStmt]
-    aux cd' = case cd' of
-      ClsDecl _ decl -> do
-        return []
-      _ -> return []
-
-className' (DHead _ n _) = n
-className' _ = error "className' should have been desugared"
-
-data Hole = Hole
-hole = undefined
-
-compileInstDecl :: S.QName -> [S.Type] -> [S.InstDecl] -> Compile [JsStmt]
-compileInstDecl n ts idecls = do
-  qn <- qualifyQName n
-  liftM concat $ forM idecls $ \(InsDecl _ dls) -> case dls of
-    pat@PatBind{} -> compilePatBind False Nothing pat
-    FunBind _ matches -> compileFunCase False matches
-
 
 mkTyVars :: S.DeclHead -> [S.TyVarBind]
 mkTyVars (DHead _ _ binds) = binds
