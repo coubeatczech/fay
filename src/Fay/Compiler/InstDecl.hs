@@ -39,18 +39,15 @@ compileClassDecl ih cd = concat <$> mapM aux cd
 className' (DHead _ n _) = n
 className' _ = error "className' should have been desugared"
 
-data Hole = Hole
-hole = undefined
-
 compileInstDecl :: S.QName -> [S.Type] -> [S.InstDecl] -> Compile [JsStmt]
 compileInstDecl n ts idecls = do
   qn <- qualifyQName n
   liftM concat $ forM idecls $ \(InsDecl _ dls) -> case dls of
-    pat@PatBind{} -> compilePatBind hole Nothing pat
-    FunBind _ matches -> compileFunCase hole matches
+    pat@PatBind{} -> compilePatBind (head ts) Nothing pat
+    FunBind _ matches -> compileFunCase (head ts) matches
 
 -- | Compile a top-level pattern bind.
-compilePatBind :: hole -> Maybe S.Type -> S.Decl -> Compile [JsStmt]
+compilePatBind :: S.Type -> Maybe S.Type -> S.Decl -> Compile [JsStmt]
 compilePatBind con sig patDecl = case patDecl of
   PatBind srcloc (PVar _ ident) Nothing (UnGuardedRhs _ rhs) Nothing ->
     case ffiExp rhs of
@@ -77,14 +74,14 @@ compilePatBind con sig patDecl = case patDecl of
       return [JsVar name exp, JsIf t b1 err]
 
 -- | Compile a normal simple pattern binding.
-compileUnguardedRhs :: hole -> S.X -> S.Name -> S.Exp -> Compile [JsStmt]
+compileUnguardedRhs :: S.Type -> S.X -> S.Name -> S.Exp -> Compile [JsStmt]
 compileUnguardedRhs con srcloc ident rhs = do
   body <- compileExp rhs
   bind <- bindName (Just (srcInfoSpan (S.srcSpanInfo srcloc))) con ident (thunk body)
   return [bind]
 
 -- | Compile a function which pattern matches (causing a case analysis).
-compileFunCase :: hole -> [S.Match] -> Compile [JsStmt]
+compileFunCase :: S.Type -> [S.Match] -> Compile [JsStmt]
 compileFunCase _ [] = return []
 compileFunCase con (InfixMatch l pat name pats rhs binds : rest) =
   compileFunCase con (Match l name (pat:pats) rhs binds : rest)
@@ -142,12 +139,16 @@ compileRhs :: S.Rhs -> Compile (Either JsStmt JsExp)
 compileRhs (UnGuardedRhs _ exp) = Right <$> compileExp exp
 compileRhs (GuardedRhss _ rhss) = Left <$> compileGuards rhss
 
-bindName :: Maybe SrcSpan -> hole -> Name l -> JsExp -> Compile JsStmt
+bindName :: Maybe SrcSpan -> S.Type -> Name l -> JsExp -> Compile JsStmt
 bindName msrcloc con (unAnn -> name) expr = do
   mod <- gets stateModuleName
   return $ JsSetQName msrcloc (Qual () (f mod (g con)) name) expr
 
 f :: N.ModuleName -> String -> N.ModuleName
-f (ModuleName () m) n = ModuleName () $ m ++ "." ++ g n ++ "." ++ "prototype"
-g :: hole -> String
-g = hole
+f (ModuleName () m) n = ModuleName () $ m ++ "." ++ n ++ "." ++ "prototype"
+
+g :: S.Type -> String
+g (TyCon _ (UnQual _ (Ident _ n))) = '_' : n
+
+data Hole = Hole
+hole = undefined
